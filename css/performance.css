@@ -242,9 +242,20 @@ section {
   padding-top: var(--space-lg);
 }
 @media (max-width: 768px) {
-  /* di layar kecil konten hero sudah tinggi, sisa ruangnya kecil */
-  #hero    { min-height: 100vh; padding-bottom: var(--space-md); }
-  #message { padding-top: var(--space-md); }
+  /* DUA KNOB, beda fungsi — jangan tertukar:
+
+     min-height  = tinggi kotak hero. Konten hero di-center vertikal, jadi
+                   mengubah ini menggeser ruang ATAS dan BAWAH sama banyak.
+                   Pakai ini kalau mau atur posisi judul terhadap layar.
+
+     margin-top  = KHUSUS jarak panah scroll → card di bawahnya. Menarik
+                   seluruh section #message naik. Sama sekali tidak
+                   menyentuh ruang di atas judul. Ini knob yang dipakai
+                   kalau cuma mau merapatkan panah ke card.
+                   Makin negatif = makin rapat. Batas aman sekitar -80px;
+                   lewat itu card mulai menimpa panahnya. */
+  #hero    { min-height: 72vh; padding-bottom: var(--space-md); }
+  #message { padding-top: var(--space-lg); margin-top: -250px; }
 }
 
 /* =============================================

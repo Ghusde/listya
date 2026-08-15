@@ -142,30 +142,80 @@ function initSmoothScroll() {
    =========================== */
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* Garden hover sparkles */
-  document.querySelectorAll('.garden-flower').forEach(flower => {
-    flower.addEventListener('mouseenter', () => {
-      const frag = document.createDocumentFragment();
-      const symbols = ['✨','⋆','✦','✧','🌸'];
-      for (let i = 0; i < 5; i++) {
-        setTimeout(() => {
-          const s = document.createElement('span');
-          s.style.cssText = `
-            position: absolute;
-            pointer-events: none;
-            font-size: ${Math.random() * 10 + 8}px;
-            top: ${Math.random() * 60 - 30 + 28}px;
-            left: ${Math.random() * 60 - 30 + 14}px;
-            animation: cursor-fade 0.75s ease forwards;
-            z-index: 20;
-          `;
-          s.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-          flower.appendChild(s);
-          setTimeout(() => s.remove(), 750);
-        }, i * 65);
+  /* ── Garden: sparkle + tooltip ── */
+  const gardenFlowers = document.querySelectorAll('.garden-flower');
+  const canHover = window.matchMedia('(hover: hover)').matches;
+
+  function sparkle(flower) {
+    const symbols = ['✨','⋆','✦','✧','🌸'];
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const s = document.createElement('span');
+        s.style.cssText = `
+          position: absolute;
+          pointer-events: none;
+          font-size: ${Math.random() * 10 + 8}px;
+          top: ${Math.random() * 60 - 30 + 28}px;
+          left: ${Math.random() * 60 - 30 + 14}px;
+          animation: cursor-fade 0.75s ease forwards;
+          z-index: 20;
+        `;
+        s.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        flower.appendChild(s);
+        setTimeout(() => s.remove(), 750);
+      }, i * 65);
+    }
+  }
+
+  /* Tooltip bunga paling pinggir bakal keluar dari #garden (yang
+     overflow-nya hidden) dan kepotong. Di sini digeser balik ke dalam
+     lewat --shift yang dibaca CSS. */
+  function placeTooltip(flower) {
+    const tip    = flower.querySelector('.gf-tooltip');
+    const garden = flower.closest('.flower-garden');
+    if (!tip || !garden) return;
+
+    tip.style.setProperty('--shift', '0px');   // ukur dari posisi netral
+    const gb  = garden.getBoundingClientRect();
+    const tb  = tip.getBoundingClientRect();
+    const pad = 8;
+
+    let shift = 0;
+    if (tb.left < gb.left + pad)         shift = (gb.left + pad) - tb.left;
+    else if (tb.right > gb.right - pad)  shift = (gb.right - pad) - tb.right;
+    if (shift) tip.style.setProperty('--shift', `${Math.round(shift)}px`);
+  }
+
+  gardenFlowers.forEach(flower => {
+    if (canHover) {
+      flower.addEventListener('mouseenter', () => {
+        placeTooltip(flower);
+        sparkle(flower);
+      });
+    }
+    /* Tap — ini jalur utama di HP, sesuai ajakan "sentuh tiap bunga" */
+    flower.addEventListener('click', () => {
+      const wasOpen = flower.classList.contains('tip-open');
+      gardenFlowers.forEach(f => f.classList.remove('tip-open'));
+      if (!wasOpen) {
+        flower.classList.add('tip-open');
+        placeTooltip(flower);
+        if (!canHover) sparkle(flower);
       }
     });
   });
+
+  /* Tap di luar bunga → tutup tooltip yang lagi kebuka */
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.garden-flower')) {
+      gardenFlowers.forEach(f => f.classList.remove('tip-open'));
+    }
+  });
+
+  /* Lebar berubah (rotate layar) → posisi geseran ikut dihitung ulang */
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.garden-flower.tip-open').forEach(placeTooltip);
+  }, { passive: true });
 
   /* Gallery 3D tilt */
   document.querySelectorAll('.gallery-card').forEach(card => {

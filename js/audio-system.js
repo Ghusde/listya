@@ -10,7 +10,9 @@
 
 /* ─────────────────────────────────────────────
    1. PLAYLIST — Edit your tracks here
-   ───────────────────────────────────────────── */
+   ─────────────────────────────────────────────
+   fadeIn: 0 = begitu kado diklik, musik langsung volume penuh tanpa ramp.
+   fadeOut masih dipakai buat pause/ganti lagu supaya tidak "klik" kasar. */
 const playlist = [
   {
     id:        'song1',
@@ -23,7 +25,7 @@ const playlist = [
     loopStart: null,    // loop rewind point (null = startTime)
     volume:    0.75,
     loop:      true,
-    fadeIn:    2.5,
+    fadeIn:    0,
     fadeOut:   2.0
   },
   {
@@ -37,7 +39,7 @@ const playlist = [
     loopStart: null,
     volume:    0.75,
     loop:      true,
-    fadeIn:    2.5,
+    fadeIn:    0,
     fadeOut:   2.0
   },
   {
@@ -51,7 +53,7 @@ const playlist = [
     loopStart: null,
     volume:    0.75,
     loop:      true,
-    fadeIn:    2.5,
+    fadeIn:    0,
     fadeOut:   2.0
   }
 ];
@@ -109,6 +111,14 @@ const AudioEngine = (() => {
   function fadeTo(target, duration, done) {
     if (fadeRaf) cancelAnimationFrame(fadeRaf);
     if (!audioCtx) { done && done(); return; }
+    /* Durasi 0 → set langsung, jangan lewat rAF. Tanpa cabang ini
+       pembagian /duration jadi NaN dan hasilnya cuma kebetulan benar. */
+    if (!duration || duration <= 0) {
+      masterGain.gain.value = target;
+      fadeRaf = null;
+      done && done();
+      return;
+    }
     const startVol = masterGain.gain.value;
     const t0 = performance.now();
     function tick() {
@@ -214,7 +224,9 @@ const AudioEngine = (() => {
     initContext();
     if (audioCtx.state === 'suspended') await audioCtx.resume();
     autoplayReady = true;
-    preloadTrack(playlist[0]);
+    /* playTrack sudah manggil preloadTrack sendiri. Dulu di sini ada
+       preloadTrack(playlist[0]) terpisah yang jalan barengan, jadi file
+       5.8MB-nya kedownload DUA kali dan musiknya makin telat mulai. */
     playTrack(0, false);
   }
 
@@ -985,14 +997,10 @@ function initSectionAtmosphere() {
    5. INTRO SYNC
    ───────────────────────────────────────────── */
 function patchIntroForAudio() {
-  const orig = window.transitionToMain;
-  if (typeof orig === 'function') {
-    window.transitionToMain = function () {
-      AudioEngine.cinematicFade(1.2);
-      orig.apply(this, arguments);
-      setTimeout(() => AudioEngine.cinematicFadeIn(2.5), 1600);
-    };
-  }
+  /* Dulu di sini transitionToMain dibungkus: volume di-fade ke 0 (1.2s) pas
+     pindah dari intro ke halaman utama, lalu dinaikkan lagi 1.6s kemudian.
+     Efeknya musik seolah hilang sesaat tepat di tengah transisi — persis
+     yang dikeluhkan. Sekarang musik dibiarkan jalan terus tanpa diganggu. */
   const gift = document.getElementById('gift-container');
   if (gift) gift.addEventListener('click', () => AudioEngine.unlock(), { once: true });
 }
